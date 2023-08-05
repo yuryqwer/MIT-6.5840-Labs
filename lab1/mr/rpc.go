@@ -1,125 +1,90 @@
 package mr
 
+//
+// RPC definitions.
+//
+// remember to capitalize all names.
+//
+
 import (
-	"net"
-	"net/rpc"
-	"net/rpc/jsonrpc"
+	"os"
+	"strconv"
 )
+
+//
+// example to show how to declare the arguments
+// and reply for an RPC.
+//
+
+type ExampleArgs struct {
+	X int
+}
+
+type ExampleReply struct {
+	Y int
+}
+
+// Add your RPC definitions here.
+type Taskid string
+
+type Taskstatus uint8
 
 const (
-	TaskServiceName = "TaskService"
-	FileServiceName = "FileService"
+	IDLE     Taskstatus = 0
+	RUNNING  Taskstatus = 1
+	FINISHED Taskstatus = 2
 )
 
-type tasktype string
+type Tasktype bool
 
 const (
-	MAPTASK    tasktype = "map"
-	REDUCETASK tasktype = "reduce"
+	MAPTASK    Tasktype = true
+	REDUCETASK Tasktype = false
 )
 
-type GetTaskRequest struct {
+type Task struct {
+	TaskID             Taskid
+	TaskType           Tasktype
+	MapTaskArgument    string
+	ReduceTaskArgument []string
+}
+
+type TaskRelated struct {
+	TaskStatus Taskstatus
+	WorkerID   string
+}
+
+type WorkerInfo struct {
 	WorkerID string
+}
+
+type GetTaskArgs struct {
+	WorkerInfo WorkerInfo
 }
 
 type GetTaskReply struct {
-	PleaseExit bool
-	NoTaskNow  bool
-	TaskID     string
-	TaskType   tasktype
-	MapTaskArg []struct {
-		FileName    string
-		FileContent string
-	}
-	ReduceTaskArg []struct {
-		Address  string
-		FilePath string
-	}
+	PleaseExit   bool
+	HaveTask     bool
+	ReduceNumber int
+	Task         Task
 }
 
-type ReportTaskRequest struct {
-	WorkerID      string
-	TaskID        string
-	TaskType      tasktype
-	MapTaskResult []struct {
-		Address  string
-		FilePath string
-	}
-	ReduceTaskResult struct {
-		Address  string
-		FilePath string
-	}
+type ReportTaskArgs struct {
+	WorkerInfo       WorkerInfo
+	TaskID           Taskid
+	TaskType         Tasktype
+	MapTaskResult    []string
+	ReduceTaskResult string
 }
 
-type ReportTaskReply struct {
-}
+type ReportTaskReply struct{}
 
-type GetFileRequest struct {
-	WorkerID string
-	FilePath string
-}
-
-type GetFileReply struct {
-	FileContent string
-}
-
-type TaskServiceInterface interface {
-	GetTask(request *GetTaskRequest, reply *GetTaskReply) error
-	ReportTask(request *ReportTaskRequest, reply *ReportTaskReply) error
-}
-
-type FileServiceInterface interface {
-	GetFile(request *GetFileRequest, reply *GetFileReply) error
-}
-
-func RegisterTaskService(svc TaskServiceInterface) error {
-	return rpc.RegisterName(TaskServiceName, svc)
-}
-
-func RegisterFileService(svc FileServiceInterface) error {
-	return rpc.RegisterName(FileServiceName, svc)
-}
-
-type TaskServiceClient struct {
-	*rpc.Client
-}
-
-func DialTaskService(network, address string) (*TaskServiceClient, error) {
-	conn, err := net.Dial(network, address)
-	if err != nil {
-		return nil, err
-	}
-	client := rpc.NewClientWithCodec(jsonrpc.NewClientCodec(conn))
-	return &TaskServiceClient{Client: client}, nil
-}
-
-func (t *TaskServiceClient) GetTask(
-	request *GetTaskRequest,
-	reply *GetTaskReply,
-) error {
-	return t.Client.Call(TaskServiceName+".GetTask", request, reply)
-}
-
-func (t *TaskServiceClient) ReportTask(
-	request *ReportTaskRequest,
-	reply *ReportTaskReply,
-) error {
-	return t.Client.Call(TaskServiceName+".ReportTask", request, reply)
-}
-
-type FileServiceClient struct {
-	*rpc.Client
-}
-
-func DialFileService(network, address string) (*FileServiceClient, error) {
-	conn, err := net.Dial(network, address)
-	if err != nil {
-		return nil, err
-	}
-	client := rpc.NewClientWithCodec(jsonrpc.NewClientCodec(conn))
-	return &FileServiceClient{Client: client}, nil
-}
-
-func (t *TaskServiceClient) GetFile(request *GetFileRequest, reply *GetFileReply) error {
-	return t.Client.Call(FileServiceName+".GetFile", request, reply)
+// Cook up a unique-ish UNIX-domain socket name
+// in /var/tmp, for the coordinator.
+// Can't use the current directory since
+// Athena AFS doesn't support UNIX-domain sockets.
+func coordinatorSock() string {
+	s := "/var/tmp/5840-mr-"
+	s += strconv.Itoa(os.Getuid())
+	return s
 }

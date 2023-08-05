@@ -82,7 +82,6 @@ func doMapTask(reply *GetTaskReply,
 	for i, file := range files {
 		newpath := fmt.Sprintf("./mr-%s-%d", filepath.Base(reply.Task.MapTaskArgument), i)
 		os.Rename(file.Name(), newpath)
-		fmt.Println(newpath)
 		mapTaskResult = append(mapTaskResult, newpath)
 	}
 	args := ReportTaskArgs{
@@ -170,7 +169,6 @@ func Worker(mapf func(string, string) []KeyValue,
 		reply := GetTaskReply{}
 		ok := call("Coordinator.GetTask", &args, &reply)
 		if !ok || reply.PleaseExit {
-			log.Println("master cannot reach")
 			return
 		} else {
 			if reply.HaveTask {

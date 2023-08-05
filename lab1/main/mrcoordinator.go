@@ -1,20 +1,29 @@
 package main
 
+//
+// start the coordinator process, which is implemented
+// in ../mr/coordinator.go
+//
+// go run mrcoordinator.go pg*.txt
+//
+// Please do not change this file.
+//
+
 import (
 	"fmt"
-	"lab1/mr"
-	"lab1/mrapps"
 	"os"
 	"time"
+
+	"lab1/mr"
 )
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Fprintf(os.Stderr, "Usage: mrmaster inputfiles...\n")
+		fmt.Fprintf(os.Stderr, "Usage: mrcoordinator inputfiles...\n")
 		os.Exit(1)
 	}
 
-	m := mr.MakeCoordinator(os.Args[1:], mrapps.NREDUCE)
+	m := mr.MakeCoordinator(os.Args[1:], 10)
 	for m.Done() == false {
 		time.Sleep(time.Second)
 	}

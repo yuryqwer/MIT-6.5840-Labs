@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"hash/fnv"
 	"io"
-	"lab1/mrapps"
 	"log"
 	"net/rpc"
 	"os"
@@ -14,6 +13,20 @@ import (
 	"strconv"
 	"time"
 )
+
+// Map functions return a slice of KeyValue.
+type KeyValue struct {
+	Key   string
+	Value string
+}
+
+// for sorting by key.
+type ByKey []KeyValue
+
+// for sorting by key.
+func (a ByKey) Len() int           { return len(a) }
+func (a ByKey) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a ByKey) Less(i, j int) bool { return a[i].Key < a[j].Key }
 
 // use ihash(key) % NReduce to choose the reduce
 // task number for each KeyValue emitted by Map.
@@ -39,7 +52,7 @@ func createTmpFile(r int, dir string) ([]*os.File, error) {
 }
 
 func doMapTask(reply *GetTaskReply,
-	mapf func(string, string) []mrapps.KeyValue,
+	mapf func(string, string) []KeyValue,
 	workerInfo WorkerInfo) error {
 	filename := reply.Task.MapTaskArgument
 	file, err := os.Open(filename)
@@ -69,6 +82,7 @@ func doMapTask(reply *GetTaskReply,
 	for i, file := range files {
 		newpath := fmt.Sprintf("./mr-%s-%d", filepath.Base(reply.Task.MapTaskArgument), i)
 		os.Rename(file.Name(), newpath)
+		fmt.Println(newpath)
 		mapTaskResult = append(mapTaskResult, newpath)
 	}
 	args := ReportTaskArgs{
@@ -88,7 +102,7 @@ func doMapTask(reply *GetTaskReply,
 func doReduceTask(reply *GetTaskReply,
 	reducef func(string, []string) string,
 	workerInfo WorkerInfo) error {
-	kva := make([]mrapps.KeyValue, 0)
+	kva := make([]KeyValue, 0)
 	for _, filename := range reply.Task.ReduceTaskArgument {
 		file, err := os.Open(filename)
 		if err != nil {
@@ -96,7 +110,7 @@ func doReduceTask(reply *GetTaskReply,
 		}
 		dec := json.NewDecoder(file)
 		for {
-			var kv mrapps.KeyValue
+			var kv KeyValue
 			if err := dec.Decode(&kv); err != nil {
 				break
 			}
@@ -104,7 +118,7 @@ func doReduceTask(reply *GetTaskReply,
 		}
 		file.Close()
 	}
-	sort.Sort(mrapps.ByKey(kva))
+	sort.Sort(ByKey(kva))
 	oname := fmt.Sprintf("mr-out-%s", reply.Task.TaskID)
 	ofile, _ := os.Create(oname)
 
@@ -145,7 +159,7 @@ func doReduceTask(reply *GetTaskReply,
 }
 
 // main/mrworker.go calls this function.
-func Worker(mapf func(string, string) []mrapps.KeyValue,
+func Worker(mapf func(string, string) []KeyValue,
 	reducef func(string, []string) string) {
 
 	// Your worker implementation here.

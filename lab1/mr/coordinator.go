@@ -1,7 +1,6 @@
 package mr
 
 import (
-	"lab1/mrapps"
 	"log"
 	"net"
 	"net/http"
@@ -74,22 +73,23 @@ func (c *Coordinator) GetTask(args *GetTaskArgs, reply *GetTaskReply) error {
 }
 
 func (c *Coordinator) handleTimeout(taskid Taskid, tasktype Tasktype) {
+	time.Sleep(time.Second * 10)
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
 	switch tasktype {
 	case MAPTASK:
-		time.Sleep(mrapps.MAPTASKTIMEOUT)
-		c.mutex.Lock()
-		defer c.mutex.Unlock()
 		if c.mapTask[taskid].TaskStatus == RUNNING {
 			c.mapTask[taskid].TaskStatus = IDLE
 			c.mapTask[taskid].WorkerID = ""
+		} else {
+
 		}
 	case REDUCETASK:
-		time.Sleep(mrapps.REDUCETASKTIMEOUT)
-		c.mutex.Lock()
-		defer c.mutex.Unlock()
 		if c.reduceTask[taskid].TaskStatus == RUNNING {
 			c.reduceTask[taskid].TaskStatus = IDLE
 			c.reduceTask[taskid].WorkerID = ""
+		} else {
+
 		}
 	}
 }

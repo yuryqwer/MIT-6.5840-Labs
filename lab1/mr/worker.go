@@ -66,7 +66,7 @@ func doMapTask(reply *GetTaskReply,
 	}
 	mapTaskResult := make([]string, 0, reply.ReduceNumber)
 	for i, file := range files {
-		newpath := fmt.Sprintf("./mr-out-%s-%d", reply.Task.MapTaskArgument, i)
+		newpath := fmt.Sprintf("./mr-%s-%d", reply.Task.MapTaskArgument, i)
 		os.Rename(file.Name(), newpath)
 		mapTaskResult = append(mapTaskResult, newpath)
 	}
